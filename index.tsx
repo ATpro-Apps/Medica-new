@@ -25,7 +25,8 @@ import {
   Crown,
   Check,
   Zap,
-  Star
+  Star,
+  Clock
 } from 'lucide-react';
 
 // --- TYPES ---
@@ -165,7 +166,47 @@ const generateQuizFromText = async (text: string): Promise<GenerateQuizResponse>
 
 // --- COMPONENTS ---
 
-// 1. AccessGate
+// 1. ExpiryTimer Component
+const ExpiryTimer: React.FC<{ targetDate: number }> = ({ targetDate }) => {
+  const [timeLeft, setTimeLeft] = useState("");
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const now = Date.now();
+      const difference = targetDate - now;
+
+      if (difference <= 0) {
+        setTimeLeft("Expired");
+        window.location.reload(); // Reload to force re-auth check
+        return;
+      }
+
+      const days = Math.floor(difference / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
+
+      if (days > 0) {
+        setTimeLeft(`${days}d ${hours}h left`);
+      } else {
+        setTimeLeft(`${hours}h ${minutes}m left`);
+      }
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 60000); // Update every minute
+
+    return () => clearInterval(timer);
+  }, [targetDate]);
+
+  return (
+    <div className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-2 rounded-lg transition-all border border-slate-200 dark:border-slate-700">
+      <Clock className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+      <span className="font-mono">{timeLeft}</span>
+    </div>
+  );
+};
+
+// 2. AccessGate
 interface AccessGateProps {
   onUnlock: (code: string) => boolean;
 }
@@ -247,7 +288,7 @@ const AccessGate: React.FC<AccessGateProps> = ({ onUnlock }) => {
           <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700 text-center">
             <div className="flex items-center justify-center gap-2 text-xs text-slate-400 dark:text-slate-500 font-semibold">
               <ShieldCheck className="w-4 h-4" />
-              <span>Session timeout: 5 minutes</span>
+              <span>Session timeout: 28 days</span>
             </div>
           </div>
         </div>
@@ -267,7 +308,7 @@ const AccessGate: React.FC<AccessGateProps> = ({ onUnlock }) => {
   );
 };
 
-// 2. InputSection
+// 3. InputSection
 interface InputSectionProps {
   text: string;
   setText: (text: string) => void;
@@ -359,7 +400,7 @@ const InputSection: React.FC<InputSectionProps> = ({
   );
 };
 
-// 3. QuizSection
+// 4. QuizSection
 interface QuizSectionProps {
   questions: Question[];
   onReset: () => void;
@@ -596,7 +637,7 @@ const QuizSection: React.FC<QuizSectionProps> = ({ questions, onReset }) => {
   );
 };
 
-// 4. AccountDashboard
+// 5. AccountDashboard
 interface AccountDashboardProps {
   user: UserProfile;
   onLogout: () => void;
@@ -697,7 +738,7 @@ const AccountDashboard: React.FC<AccountDashboardProps> = ({
   );
 };
 
-// 5. PricingSection
+// 6. PricingSection
 interface PricingSectionProps {
   onSubscribe: (plan: 'monthly' | 'yearly') => void;
 }
@@ -846,7 +887,7 @@ const PricingSection: React.FC<PricingSectionProps> = ({ onSubscribe }) => {
   );
 };
 
-// 6. AuthScreen
+// 7. AuthScreen
 interface AuthScreenProps {
   onLogin: (email: string, name: string) => void;
 }
@@ -933,10 +974,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
 
 const VALID_CODES = ['sad', 'happy', 'man'];
 const AUTH_KEY = 'medica_device_auth';
+const EXPIRY_DURATION_MINUTES = 40320; // 28 days
+const EXPIRY_TIME_MS = EXPIRY_DURATION_MINUTES * 60 * 1000;
 
 const App = () => {
   // --- STATE ---
   const [isAuthorized, setIsAuthorized] = useState<boolean>(false);
+  const [expiryTimestamp, setExpiryTimestamp] = useState<number | null>(null);
   const [step, setStep] = useState<AppStep>('input');
   
   // Theme State
@@ -963,15 +1007,15 @@ const App = () => {
                 // Parse stored object: { status: 'granted', timestamp: number }
                 const authData = JSON.parse(storedAuth);
                 const now = Date.now();
-                const EXPIRY_TIME = 5 * 60 * 1000; // 5 minutes in ms
 
                 if (
                     authData && 
                     authData.status === 'granted' && 
                     authData.timestamp && 
-                    (now - authData.timestamp < EXPIRY_TIME)
+                    (now - authData.timestamp < EXPIRY_TIME_MS)
                 ) {
                     setIsAuthorized(true);
+                    setExpiryTimestamp(authData.timestamp + EXPIRY_TIME_MS);
                 } else {
                     // Expired or invalid format
                     localStorage.removeItem(AUTH_KEY);
@@ -1004,12 +1048,14 @@ const App = () => {
     const normalizeCode = code.trim().toLowerCase();
     if (VALID_CODES.includes(normalizeCode)) {
       // Store auth with timestamp
+      const timestamp = Date.now();
       const authData = {
           status: 'granted',
-          timestamp: Date.now()
+          timestamp: timestamp
       };
       localStorage.setItem(AUTH_KEY, JSON.stringify(authData));
       setIsAuthorized(true);
+      setExpiryTimestamp(timestamp + EXPIRY_TIME_MS);
       return true;
     }
     return false;
@@ -1072,14 +1118,9 @@ const App = () => {
               {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
 
-            {isAuthorized && (
-              <button 
-                onClick={handleLogout}
-                className="flex items-center gap-2 text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-3 py-2 rounded-lg transition-all"
-              >
-                <LogOut className="w-4 h-4" />
-                <span>Exit System</span>
-              </button>
+            {/* Replaced Logout Button with Timer */}
+            {isAuthorized && expiryTimestamp && (
+              <ExpiryTimer targetDate={expiryTimestamp} />
             )}
           </div>
         </div>
@@ -1120,7 +1161,7 @@ const App = () => {
           </div>
           <div className="flex flex-col items-center gap-2">
             <p className="text-slate-400 dark:text-slate-500 text-xs font-medium uppercase tracking-widest">
-              Exhaustive Information Extraction • Powered by Gemini 2.5
+              Made by Medica Team - Copyright@ Medica 2026
             </p>
             {isAuthorized && (
               <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full border border-green-100 dark:border-green-900/30">
