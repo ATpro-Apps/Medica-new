@@ -97,27 +97,7 @@ const quizSchema: Schema = {
 
 const generateQuizFromText = async (text: string): Promise<GenerateQuizResponse> => {
   try {
-    // Robust API Key Retrieval for Browser Environments
-    let apiKey = process.env.API_KEY;
-    
-    // Fallback for environments using import.meta (Vite, etc)
-    if (!apiKey) {
-      try {
-        // @ts-ignore
-        if (typeof import.meta !== 'undefined' && import.meta.env) {
-           // @ts-ignore
-           apiKey = import.meta.env.VITE_API_KEY || import.meta.env.API_KEY;
-        }
-      } catch (e) {
-        // Ignore errors accessing import.meta
-      }
-    }
-    
-    if (!apiKey) {
-      throw new Error("API Key is missing. Please ensure process.env.API_KEY is correctly configured in your environment.");
-    }
-
-    const genAI = new GoogleGenAI({ apiKey });
+    const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     const systemPrompt = `
       You are "Medica", an advanced IQ and cognitive assessment expert specializing in medical and scientific education.
