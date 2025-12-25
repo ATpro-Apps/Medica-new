@@ -7,10 +7,11 @@
     <title>Medica AI</title>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script>
-      // Polyfill process.env for browser compatibility
-      window.process = window.process || { env: { API_KEY: '' } };
+      // 1. Polyfill process.env globally for browser compatibility
+      // This prevents "ReferenceError: process is not defined"
+      window.process = { env: { API_KEY: '' } };
       
-      // Suppress warnings for cleaner console in preview
+      // 2. Suppress console warnings for a cleaner preview
       const originalWarn = console.warn;
       console.warn = function(...args) {
         const msg = args[0];
@@ -70,8 +71,8 @@
   <body>
     <div id="root"></div>
     <!-- 
-      Using a single entry file (index.tsx) to avoid browser-side module loading issues 
-      with .tsx files and MIME types on static hosts like GitHub Pages.
+      Using a single entry file (index.tsx) prevents module loading errors 
+      that occur when importing separate .tsx files in the browser.
     -->
     <script type="text/babel" data-type="module" src="./index.tsx" data-presets="react,typescript"></script>
   </body>
