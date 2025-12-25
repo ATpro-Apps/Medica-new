@@ -97,16 +97,26 @@ const quizSchema: Schema = {
 
 // --- HELPER: ROBUST API KEY RETRIEVAL ---
 const getApiKey = (): string | undefined => {
-  // 1. Try standard process.env (Bundler injection or polyfill)
+  // 1. Try standard process.env (Node/Webpack/Parcel)
   try {
-    if (typeof process !== 'undefined' && process.env?.API_KEY) {
-      return process.env.API_KEY;
+    if (typeof process !== 'undefined' && process.env) {
+      if (process.env.API_KEY) return process.env.API_KEY;
+      if (process.env.REACT_APP_API_KEY) return process.env.REACT_APP_API_KEY;
     }
-  } catch (e) {
-    // Ignore ReferenceError if process is not defined
-  }
+  } catch (e) {}
 
-  // 2. Try direct window access (if injected by some environments)
+  // 2. Try Vite / Modern Browser Envs (import.meta.env)
+  try {
+    // @ts-ignore
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+      // @ts-ignore
+      if (import.meta.env.API_KEY) return import.meta.env.API_KEY;
+      // @ts-ignore
+      if (import.meta.env.VITE_API_KEY) return import.meta.env.VITE_API_KEY;
+    }
+  } catch (e) {}
+
+  // 3. Try Global Window Fallback
   try {
     // @ts-ignore
     if (typeof window !== 'undefined' && window.process?.env?.API_KEY) {
@@ -125,7 +135,7 @@ const generateQuizFromText = async (text: string): Promise<GenerateQuizResponse>
     if (!apiKey) {
         return {
           success: false,
-          error: "System Error: API_KEY is missing from environment variables."
+          error: "System Error: API_KEY is missing. Please check your .env file or environment variables."
         };
     }
 
