@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Trophy, RefreshCw, Brain, CheckCircle2, XCircle } from 'lucide-react';
-import { Question, UserAnswers } from '../types';
+import type { Question, UserAnswers } from '../types.ts';
 
 interface QuizSectionProps {
   questions: Question[];

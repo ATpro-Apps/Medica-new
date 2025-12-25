@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserProfile } from '../types';
+import type { UserProfile } from '../types.ts';
 import { CreditCard, Calendar, Shield, LogOut, XCircle } from 'lucide-react';
 
 interface AccountDashboardProps {

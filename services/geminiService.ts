@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
-import { GenerateQuizResponse, QuizData } from "../types";
+import type { GenerateQuizResponse, QuizData } from "../types.ts";
 
 const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
 

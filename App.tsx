@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Brain, LogOut, ShieldCheck, Moon, Sun } from 'lucide-react';
-import { InputSection } from './components/InputSection';
-import { QuizSection } from './components/QuizSection';
-import { AccessGate } from './components/AccessGate';
-import { generateQuizFromText } from './services/geminiService';
-import { Question, AppStep } from './types';
+import { InputSection } from './components/InputSection.tsx';
+import { QuizSection } from './components/QuizSection.tsx';
+import { AccessGate } from './components/AccessGate.tsx';
+import { generateQuizFromText } from './services/geminiService.ts';
+import type { Question, AppStep } from './types.ts';
 
 // Valid codes configuration
 const VALID_CODES = ['sad', 'happy', 'man'];
