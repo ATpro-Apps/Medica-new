@@ -26,7 +26,7 @@ export interface UserAnswers {
 export interface UserProfile {
   name: string;
   email: string;
-  status: 'active' | 'inactive';
   plan?: string;
+  status: 'active' | 'inactive';
   nextBillingDate?: string;
 }
