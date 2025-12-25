@@ -29,6 +29,12 @@ import {
   Clock
 } from 'lucide-react';
 
+// --- GLOBAL POLYFILL ---
+// Ensure 'process' exists in this module scope and preserves existing window.process (from index.html)
+const process = (typeof window !== 'undefined' && (window as any).process) 
+  ? (window as any).process 
+  : { env: {} };
+
 // --- TYPES ---
 export interface Question {
   id: number;
@@ -65,13 +71,6 @@ export interface UserProfile {
 
 // --- SERVICES ---
 
-// Ensure process is defined for direct access if not replaced by bundler
-if (typeof process === 'undefined') {
-  (window as any).process = { env: {} };
-}
-
-// Use process.env.API_KEY directly as required by the environment/bundler
-const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
 const modelId = "gemini-3-flash-preview";
 
 const quizSchema: Schema = {
@@ -104,10 +103,15 @@ const quizSchema: Schema = {
 
 const generateQuizFromText = async (text: string): Promise<GenerateQuizResponse> => {
   try {
-    // Check for API key at the time of request to allow for late initialization
-    if (!process.env.API_KEY) {
-        throw new Error("API Key is missing. Please ensure the environment is configured correctly.");
+    // 1. Get API Key safely
+    const apiKey = process.env.API_KEY;
+    
+    if (!apiKey) {
+        console.warn("API Key appears to be missing in process.env. Ensure it is set in your environment variables.");
     }
+
+    // 2. Initialize Client lazily
+    const genAI = new GoogleGenAI({ apiKey: apiKey || '' });
 
     const systemPrompt = `
       You are "Medica", an advanced IQ and cognitive assessment expert specializing in medical and scientific education.
