@@ -59,7 +59,10 @@ export interface UserProfile {
 }
 
 // --- SERVICES ---
-const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Initialize securely. If process.env.API_KEY is replaced by build/env, it works.
+// If not, we fallback to empty string to prevent crash on initialization, but calls will fail if key is missing.
+const apiKey = process.env.API_KEY || ''; 
+const genAI = new GoogleGenAI({ apiKey });
 const modelId = "gemini-3-flash-preview";
 
 const quizSchema: Schema = {
@@ -92,6 +95,9 @@ const quizSchema: Schema = {
 
 const generateQuizFromText = async (text: string): Promise<GenerateQuizResponse> => {
   try {
+    if (!apiKey) {
+        throw new Error("API Key is missing. Please ensure the environment is configured correctly.");
+    }
     const systemPrompt = `
       You are "Medica", an advanced IQ and cognitive assessment expert specializing in medical and scientific education.
       

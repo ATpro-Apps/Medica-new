@@ -7,6 +7,9 @@
     <title>Medica AI</title>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script>
+      // Polyfill process.env for browser compatibility
+      window.process = window.process || { env: { API_KEY: '' } };
+      
       // Suppress warnings for cleaner console in preview
       const originalWarn = console.warn;
       console.warn = function(...args) {
