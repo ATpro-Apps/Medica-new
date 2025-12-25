@@ -29,6 +29,20 @@ import {
   Clock
 } from 'lucide-react';
 
+// --- GLOBAL POLYFILL ---
+// Ensures 'process.env.API_KEY' is accessible even in browser environments without bundler injection.
+// Checks window.process (from index.html), import.meta.env (Vite), or defaults to empty object.
+const getProcessEnv = () => {
+  if (typeof process !== 'undefined') return process.env;
+  if (typeof window !== 'undefined' && (window as any).process?.env) return (window as any).process.env;
+  // @ts-ignore
+  if (typeof import.meta !== 'undefined' && import.meta.env) return import.meta.env;
+  return {};
+};
+
+const env = getProcessEnv();
+const API_KEY = env.API_KEY || env.VITE_API_KEY || env.REACT_APP_API_KEY || '';
+
 // --- TYPES ---
 export interface Question {
   id: number;
@@ -95,39 +109,10 @@ const quizSchema: Schema = {
   required: ["questions"],
 };
 
-// Robust API Key Retrieval
-const getApiKey = (): string | undefined => {
-  // 1. Try standard process.env (Bundler injection)
-  try {
-    if (typeof process !== 'undefined' && process.env?.API_KEY) {
-      return process.env.API_KEY;
-    }
-  } catch (e) {}
-
-  // 2. Try window.process (Browser manual injection)
-  try {
-    // @ts-ignore
-    if (typeof window !== 'undefined' && window.process?.env?.API_KEY) {
-      // @ts-ignore
-      return window.process.env.API_KEY;
-    }
-  } catch (e) {}
-
-  return undefined;
-};
-
 const generateQuizFromText = async (text: string): Promise<GenerateQuizResponse> => {
   try {
-    const apiKey = getApiKey();
-    
-    if (!apiKey) {
-        return {
-          success: false,
-          error: "API Key is missing. Please configure your environment variables (API_KEY) or check index.html settings."
-        };
-    }
-
-    const genAI = new GoogleGenAI({ apiKey });
+    // Initialize client inside the function to avoid early initialization errors
+    const genAI = new GoogleGenAI({ apiKey: API_KEY });
 
     const systemPrompt = `
       You are "Medica", an advanced IQ and cognitive assessment expert specializing in medical and scientific education.
@@ -183,11 +168,10 @@ const generateQuizFromText = async (text: string): Promise<GenerateQuizResponse>
 
   } catch (error) {
     console.error("Gemini API Error:", error);
-    // Detect specifically the API key missing error from SDK if it slips through
     if (error instanceof Error && error.message.includes("API Key is missing")) {
         return {
             success: false,
-            error: "API Key is missing. Please ensure the environment is configured correctly with API_KEY."
+            error: "System Error: API Configuration Invalid. Please contact administrator."
         };
     }
     return {
