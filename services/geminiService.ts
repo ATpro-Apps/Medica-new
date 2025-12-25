@@ -1,8 +1,6 @@
 import { GoogleGenAI, Type, Schema } from "@google/genai";
 import type { GenerateQuizResponse, QuizData } from "../types.ts";
 
-const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
 const modelId = "gemini-3-flash-preview";
 
 const quizSchema: Schema = {
@@ -35,6 +33,15 @@ const quizSchema: Schema = {
 
 export const generateQuizFromText = async (text: string): Promise<GenerateQuizResponse> => {
   try {
+    const apiKey = process.env.API_KEY;
+    
+    if (!apiKey) {
+      throw new Error("API Key is missing. Please ensure process.env.API_KEY is correctly configured in your environment.");
+    }
+
+    // Initialize the client inside the function to ensure the API key is available
+    const genAI = new GoogleGenAI({ apiKey });
+
     const systemPrompt = `
       You are "Medica", an advanced IQ and cognitive assessment expert specializing in medical and scientific education.
       
