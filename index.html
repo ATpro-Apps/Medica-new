@@ -12,12 +12,6 @@
       window.process = window.process || {};
       window.process.env = window.process.env || {};
       
-      // Initialize API_KEY if not present (prevents undefined access errors)
-      // Users running locally can replace the empty string below with their key if needed
-      if (!window.process.env.API_KEY) {
-        window.process.env.API_KEY = '';
-      }
-      
       // 2. Suppress console warnings for a cleaner preview
       const originalWarn = console.warn;
       console.warn = function(...args) {

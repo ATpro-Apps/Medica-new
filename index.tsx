@@ -29,20 +29,6 @@ import {
   Clock
 } from 'lucide-react';
 
-// --- GLOBAL POLYFILL ---
-// Ensures 'process.env.API_KEY' is accessible even in browser environments without bundler injection.
-// Checks window.process (from index.html), import.meta.env (Vite), or defaults to empty object.
-const getProcessEnv = () => {
-  if (typeof process !== 'undefined') return process.env;
-  if (typeof window !== 'undefined' && (window as any).process?.env) return (window as any).process.env;
-  // @ts-ignore
-  if (typeof import.meta !== 'undefined' && import.meta.env) return import.meta.env;
-  return {};
-};
-
-const env = getProcessEnv();
-const API_KEY = env.API_KEY || env.VITE_API_KEY || env.REACT_APP_API_KEY || '';
-
 // --- TYPES ---
 export interface Question {
   id: number;
@@ -111,8 +97,8 @@ const quizSchema: Schema = {
 
 const generateQuizFromText = async (text: string): Promise<GenerateQuizResponse> => {
   try {
-    // Initialize client inside the function to avoid early initialization errors
-    const genAI = new GoogleGenAI({ apiKey: API_KEY });
+    // Access process.env.API_KEY directly to allow bundler string replacement
+    const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     const systemPrompt = `
       You are "Medica", an advanced IQ and cognitive assessment expert specializing in medical and scientific education.
@@ -168,10 +154,10 @@ const generateQuizFromText = async (text: string): Promise<GenerateQuizResponse>
 
   } catch (error) {
     console.error("Gemini API Error:", error);
-    if (error instanceof Error && error.message.includes("API Key is missing")) {
+    if (error instanceof Error && error.message.includes("API key")) {
         return {
             success: false,
-            error: "System Error: API Configuration Invalid. Please contact administrator."
+            error: "Configuration Error: API Key is invalid or missing. Please check your environment variables."
         };
     }
     return {
