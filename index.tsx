@@ -95,10 +95,41 @@ const quizSchema: Schema = {
   required: ["questions"],
 };
 
+// --- HELPER: ROBUST API KEY RETRIEVAL ---
+const getApiKey = (): string | undefined => {
+  // 1. Try standard process.env (Bundler injection or polyfill)
+  try {
+    if (typeof process !== 'undefined' && process.env?.API_KEY) {
+      return process.env.API_KEY;
+    }
+  } catch (e) {
+    // Ignore ReferenceError if process is not defined
+  }
+
+  // 2. Try direct window access (if injected by some environments)
+  try {
+    // @ts-ignore
+    if (typeof window !== 'undefined' && window.process?.env?.API_KEY) {
+      // @ts-ignore
+      return window.process.env.API_KEY;
+    }
+  } catch (e) {}
+
+  return undefined;
+};
+
 const generateQuizFromText = async (text: string): Promise<GenerateQuizResponse> => {
   try {
-    // Access process.env.API_KEY directly to allow bundler string replacement
-    const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const apiKey = getApiKey();
+    
+    if (!apiKey) {
+        return {
+          success: false,
+          error: "System Error: API_KEY is missing from environment variables."
+        };
+    }
+
+    const genAI = new GoogleGenAI({ apiKey });
 
     const systemPrompt = `
       You are "Medica", an advanced IQ and cognitive assessment expert specializing in medical and scientific education.
@@ -154,7 +185,7 @@ const generateQuizFromText = async (text: string): Promise<GenerateQuizResponse>
 
   } catch (error) {
     console.error("Gemini API Error:", error);
-    if (error instanceof Error && error.message.includes("API key")) {
+    if (error instanceof Error && (error.message.includes("API key") || error.message.includes("API Key"))) {
         return {
             success: false,
             error: "Configuration Error: API Key is invalid or missing. Please check your environment variables."
