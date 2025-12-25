@@ -7,9 +7,16 @@
     <title>Medica AI</title>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script>
-      // 1. Polyfill process.env globally for browser compatibility
-      // This prevents "ReferenceError: process is not defined"
-      window.process = { env: { API_KEY: '' } };
+      // 1. Safe process.env polyfill
+      // Ensures window.process.env exists without overwriting if it's already defined
+      window.process = window.process || {};
+      window.process.env = window.process.env || {};
+      
+      // Initialize API_KEY if not present (prevents undefined access errors)
+      // Users running locally can replace the empty string below with their key if needed
+      if (!window.process.env.API_KEY) {
+        window.process.env.API_KEY = '';
+      }
       
       // 2. Suppress console warnings for a cleaner preview
       const originalWarn = console.warn;

@@ -65,8 +65,30 @@ export interface UserProfile {
 
 // --- SERVICES ---
 
-// FIX: Safely access API_KEY from window.process to avoid "process is not defined" error
-const apiKey = (window as any).process?.env?.API_KEY || ''; 
+// Helper to safely get API Key from various sources (Bundler, Node, or Browser Polyfill)
+const getApiKey = (): string => {
+  // 1. Try standard process.env (handled by bundlers like Vite/Webpack)
+  try {
+    // @ts-ignore
+    if (typeof process !== 'undefined' && process.env?.API_KEY) {
+      // @ts-ignore
+      return process.env.API_KEY;
+    }
+  } catch (e) {
+    // Ignore ReferenceError if process is not defined
+  }
+
+  // 2. Try window.process (browser polyfill)
+  try {
+    if (typeof window !== 'undefined' && (window as any).process?.env?.API_KEY) {
+      return (window as any).process.env.API_KEY;
+    }
+  } catch (e) {}
+
+  return '';
+};
+
+const apiKey = getApiKey();
 const genAI = new GoogleGenAI({ apiKey });
 const modelId = "gemini-3-flash-preview";
 
