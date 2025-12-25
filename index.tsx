@@ -247,7 +247,7 @@ const AccessGate: React.FC<AccessGateProps> = ({ onUnlock }) => {
           <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-700 text-center">
             <div className="flex items-center justify-center gap-2 text-xs text-slate-400 dark:text-slate-500 font-semibold">
               <ShieldCheck className="w-4 h-4" />
-              <span>Device authorization will be remembered</span>
+              <span>Session timeout: 5 minutes</span>
             </div>
           </div>
         </div>
@@ -956,11 +956,36 @@ const App = () => {
 
   // --- INITIALIZATION ---
   useEffect(() => {
-    // Check local storage for existing authorization
-    const storedAuth = localStorage.getItem(AUTH_KEY);
-    if (storedAuth === 'granted') {
-      setIsAuthorized(true);
-    }
+    const checkAuth = () => {
+        const storedAuth = localStorage.getItem(AUTH_KEY);
+        if (storedAuth) {
+            try {
+                // Parse stored object: { status: 'granted', timestamp: number }
+                const authData = JSON.parse(storedAuth);
+                const now = Date.now();
+                const EXPIRY_TIME = 5 * 60 * 1000; // 5 minutes in ms
+
+                if (
+                    authData && 
+                    authData.status === 'granted' && 
+                    authData.timestamp && 
+                    (now - authData.timestamp < EXPIRY_TIME)
+                ) {
+                    setIsAuthorized(true);
+                } else {
+                    // Expired or invalid format
+                    localStorage.removeItem(AUTH_KEY);
+                    setIsAuthorized(false);
+                }
+            } catch (e) {
+                // Likely parsing error (old format "granted" string)
+                localStorage.removeItem(AUTH_KEY);
+                setIsAuthorized(false);
+            }
+        }
+    };
+    
+    checkAuth();
   }, []);
 
   // Theme Effect
@@ -978,7 +1003,12 @@ const App = () => {
   const handleUnlock = (code: string): boolean => {
     const normalizeCode = code.trim().toLowerCase();
     if (VALID_CODES.includes(normalizeCode)) {
-      localStorage.setItem(AUTH_KEY, 'granted');
+      // Store auth with timestamp
+      const authData = {
+          status: 'granted',
+          timestamp: Date.now()
+      };
+      localStorage.setItem(AUTH_KEY, JSON.stringify(authData));
       setIsAuthorized(true);
       return true;
     }
@@ -1095,7 +1125,7 @@ const App = () => {
             {isAuthorized && (
               <span className="inline-flex items-center gap-1 text-[10px] font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 px-2 py-1 rounded-full border border-green-100 dark:border-green-900/30">
                 <ShieldCheck className="w-3 h-3" />
-                Device Authorized
+                Session Active
               </span>
             )}
           </div>
