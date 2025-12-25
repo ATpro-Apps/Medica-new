@@ -29,12 +29,6 @@ import {
   Clock
 } from 'lucide-react';
 
-// --- GLOBAL POLYFILL ---
-// Ensure 'process' exists in this module scope and preserves existing window.process (from index.html)
-const process = (typeof window !== 'undefined' && (window as any).process) 
-  ? (window as any).process 
-  : { env: {} };
-
 // --- TYPES ---
 export interface Question {
   id: number;
@@ -101,17 +95,39 @@ const quizSchema: Schema = {
   required: ["questions"],
 };
 
+// Robust API Key Retrieval
+const getApiKey = (): string | undefined => {
+  // 1. Try standard process.env (Bundler injection)
+  try {
+    if (typeof process !== 'undefined' && process.env?.API_KEY) {
+      return process.env.API_KEY;
+    }
+  } catch (e) {}
+
+  // 2. Try window.process (Browser manual injection)
+  try {
+    // @ts-ignore
+    if (typeof window !== 'undefined' && window.process?.env?.API_KEY) {
+      // @ts-ignore
+      return window.process.env.API_KEY;
+    }
+  } catch (e) {}
+
+  return undefined;
+};
+
 const generateQuizFromText = async (text: string): Promise<GenerateQuizResponse> => {
   try {
-    // 1. Get API Key safely
-    const apiKey = process.env.API_KEY;
+    const apiKey = getApiKey();
     
     if (!apiKey) {
-        console.warn("API Key appears to be missing in process.env. Ensure it is set in your environment variables.");
+        return {
+          success: false,
+          error: "API Key is missing. Please configure your environment variables (API_KEY) or check index.html settings."
+        };
     }
 
-    // 2. Initialize Client lazily
-    const genAI = new GoogleGenAI({ apiKey: apiKey || '' });
+    const genAI = new GoogleGenAI({ apiKey });
 
     const systemPrompt = `
       You are "Medica", an advanced IQ and cognitive assessment expert specializing in medical and scientific education.
@@ -167,6 +183,13 @@ const generateQuizFromText = async (text: string): Promise<GenerateQuizResponse>
 
   } catch (error) {
     console.error("Gemini API Error:", error);
+    // Detect specifically the API key missing error from SDK if it slips through
+    if (error instanceof Error && error.message.includes("API Key is missing")) {
+        return {
+            success: false,
+            error: "API Key is missing. Please ensure the environment is configured correctly with API_KEY."
+        };
+    }
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to generate assessment.",
