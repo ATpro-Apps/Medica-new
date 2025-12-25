@@ -97,18 +97,9 @@ const quizSchema: Schema = {
 
 const generateQuizFromText = async (text: string): Promise<GenerateQuizResponse> => {
   try {
-    // Access the API Key directly from process.env as required
-    const apiKey = process.env.API_KEY;
-
-    if (!apiKey) {
-      // Return a clean error message to be displayed in the UI instead of throwing and crashing
-      return {
-        success: false,
-        error: "Configuration Error: API_KEY is missing from environment variables."
-      };
-    }
-
-    const genAI = new GoogleGenAI({ apiKey });
+    // Initialize the client directly with the environment variable.
+    // This ensures compatibility with build tools that rely on static string replacement for process.env.API_KEY.
+    const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     const systemPrompt = `
       You are "Medica", an advanced IQ and cognitive assessment expert specializing in medical and scientific education.
