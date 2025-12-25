@@ -97,7 +97,18 @@ const quizSchema: Schema = {
 
 const generateQuizFromText = async (text: string): Promise<GenerateQuizResponse> => {
   try {
-    const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // Access the API Key directly from process.env as required
+    const apiKey = process.env.API_KEY;
+
+    if (!apiKey) {
+      // Return a clean error message to be displayed in the UI instead of throwing and crashing
+      return {
+        success: false,
+        error: "Configuration Error: API_KEY is missing from environment variables."
+      };
+    }
+
+    const genAI = new GoogleGenAI({ apiKey });
 
     const systemPrompt = `
       You are "Medica", an advanced IQ and cognitive assessment expert specializing in medical and scientific education.
