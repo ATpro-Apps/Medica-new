@@ -65,31 +65,13 @@ export interface UserProfile {
 
 // --- SERVICES ---
 
-// Helper to safely get API Key from various sources (Bundler, Node, or Browser Polyfill)
-const getApiKey = (): string => {
-  // 1. Try standard process.env (handled by bundlers like Vite/Webpack)
-  try {
-    // @ts-ignore
-    if (typeof process !== 'undefined' && process.env?.API_KEY) {
-      // @ts-ignore
-      return process.env.API_KEY;
-    }
-  } catch (e) {
-    // Ignore ReferenceError if process is not defined
-  }
+// Ensure process is defined for direct access if not replaced by bundler
+if (typeof process === 'undefined') {
+  (window as any).process = { env: {} };
+}
 
-  // 2. Try window.process (browser polyfill)
-  try {
-    if (typeof window !== 'undefined' && (window as any).process?.env?.API_KEY) {
-      return (window as any).process.env.API_KEY;
-    }
-  } catch (e) {}
-
-  return '';
-};
-
-const apiKey = getApiKey();
-const genAI = new GoogleGenAI({ apiKey });
+// Use process.env.API_KEY directly as required by the environment/bundler
+const genAI = new GoogleGenAI({ apiKey: process.env.API_KEY });
 const modelId = "gemini-3-flash-preview";
 
 const quizSchema: Schema = {
@@ -122,9 +104,11 @@ const quizSchema: Schema = {
 
 const generateQuizFromText = async (text: string): Promise<GenerateQuizResponse> => {
   try {
-    if (!apiKey) {
+    // Check for API key at the time of request to allow for late initialization
+    if (!process.env.API_KEY) {
         throw new Error("API Key is missing. Please ensure the environment is configured correctly.");
     }
+
     const systemPrompt = `
       You are "Medica", an advanced IQ and cognitive assessment expert specializing in medical and scientific education.
       
